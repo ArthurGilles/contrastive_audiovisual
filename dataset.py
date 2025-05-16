@@ -8,9 +8,8 @@ class VideoAudioDataset(Dataset):
     def __init__(self, files, device, audio_params):
         """
         Args:
-            video_files (list): List of tuples to audio files and their
+            files (list): List of tuples to audio files and their
             corresponding extracted visual features (features, audio_file).
-            visual_model (nn.Module): The frozen VGGFace2 model.
             device (torch.device): CPU or CUDA device.
             audio_params (dict): Parameters for STFT (n_fft, hop_length, sr).
         """
