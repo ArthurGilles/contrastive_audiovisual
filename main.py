@@ -10,6 +10,7 @@ from tqdm import tqdm
 from audioEncoder import AudioEncoder
 from model import AVContrastiveModel
 from dataset import VideoAudioDataset, padding_batch
+from metric import calculate_accuracy
 
 
 def get_files_from_dir(directory):

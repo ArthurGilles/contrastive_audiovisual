@@ -11,4 +11,7 @@ class AVContrastiveModel(nn.Module):
         audio_feat = self.audio_encoder(audio_stft)
         audio_embedding = self.audio_projection(audio_feat)
         visual_embedding = self.visual_projection(visual_features_pooled)
+        # Normalize the embeddings
+        audio_embedding = nn.functional.normalize(audio_embedding, p=2, dim=-1)
+        visual_embedding = nn.functional.normalize(visual_embedding, p=2, dim=-1)
         return visual_embedding, audio_embedding
