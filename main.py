@@ -1,7 +1,6 @@
 import os
 import time
 import json
-import numpy as np
 import torch
 import torch.nn as nn 
 import torch.optim as optim
@@ -15,14 +14,19 @@ from metric import calculate_accuracy
 
 def get_files_from_dir(directory):
     """
-    NB comment
+    Get all ID.wav and associated ID_avhubert.npy files from the given 
+    directory and its subdirectories. And return them as a list of 2-tuples.
+    Args:
+        directory (str): The root directory to search for files.
+    Returns:
+        list : A list of tuples containing the paths to the .npy and .wav files.
     """
     file_pairs = []
     for root, dirs, files in os.walk(directory):
         ids = set(f.split('.')[0] for f in files if f.endswith('.wav'))
         for id in ids:
             wav_file = os.path.join(root, f"{id}.wav")
-            avhubert_fps30_file = os.path.join(root, f"{id}_avhubert_fps30.npy")
+            avhubert_fps30_file = os.path.join(root, f"{id}_avhubert.npy")
             if os.path.exists(wav_file) and os.path.exists(avhubert_fps30_file):
                 file_pairs.append((avhubert_fps30_file, wav_file))
     return file_pairs
@@ -43,7 +47,7 @@ if __name__ == "__main__":
     CHECKPOINT_PATH = "checkpoint.pth"
     HISTORY_PATH = "training_history.json"
     TRAINING_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/train_data_NTCD/" 
-    TEST_DATASET_PATH = "/"
+    TEST_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/test_data_NTCD/clean"
     # Audio STFT parameters
     NFFT = 512
     HOP_LENGTH = 160
@@ -66,19 +70,29 @@ if __name__ == "__main__":
 
     # --- Prepare Data ---
     training_paths = get_files_from_dir(TRAINING_DATASET_PATH) 
+    test_paths = get_files_from_dir(TEST_DATASET_PATH)
+    print(f"Found {len(training_paths)} training files and {len(test_paths)} test files.")
     if len(training_paths) < BATCH_SIZE:
         print(f"Warning: Number of videos ({len(training_paths)}) < batch size ({BATCH_SIZE}).")
     if len(training_paths) == 0:
         raise ValueError("No valid video paths found.")
 
     print("Initializing Dataset...")
-    dataset = VideoAudioDataset(training_paths, device, audio_params)
+    training_dataset = VideoAudioDataset(training_paths, device, audio_params)
+    test_dataset = VideoAudioDataset(test_paths, device, audio_params)
 
     print("Initializing DataLoader...")
-    dataloader = DataLoader(
-        dataset,
+    training_dataloader = DataLoader(
+        training_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
+        num_workers=4, # Potentially change, need to test on grid5000
+        collate_fn=padding_batch # Use the custom collate function for padding
+    )
+    test_dataloader = DataLoader(
+        test_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
         num_workers=4, # Potentially change, need to test on grid5000
         collate_fn=padding_batch # Use the custom collate function for padding
     )
@@ -103,7 +117,17 @@ if __name__ == "__main__":
     ], lr=LEARNING_RATE)
 
     # Initialize history
-    history = {'epoch': [], 'average_loss': []}
+    history = {
+        'training': {
+            'average_loss': [], 
+            'audio_accuracy': [],
+            'visual_accuracy': []
+        },
+        'test': {
+            'audio_accuracy': [],
+            'visual_accuracy': []
+        }
+    }
 
     # --- Training Loop ---
     print("Starting Training...")
@@ -113,7 +137,7 @@ if __name__ == "__main__":
         batch_count = 0
         epoch_start_time = time.time()
 
-        progress_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
+        progress_bar = tqdm(training_dataloader, desc=f"Epoch {epoch+1}/{EPOCHS}")
 
         for batch in progress_bar:
             visual_pooled = batch['visual_pooled']
@@ -161,20 +185,36 @@ if __name__ == "__main__":
         if batch_count > 0:
             avg_loss = total_loss / batch_count
             print(f"Epoch {epoch+1}/{EPOCHS}, Average Loss: {avg_loss:.4f}, Duration: {epoch_duration:.2f}s")
-            history['epoch'].append(epoch + 1)
-            history['average_loss'].append(avg_loss)
+            history["training"]['average_loss'].append([epoch +1,avg_loss])
+            if epoch % 5 == 0:
+                # Calculate accuracy and save model every 5 epochs
+                
+                # Calculate accuracy
+                # model.eval() is already set in the calculate_accuracy function
+                audio_accuracy_test, visual_accuracy_test = calculate_accuracy(model, test_dataloader)
+                audio_accuracy_train, visual_accuracy_train = calculate_accuracy(model, training_dataloader)
+                
+                # Save accuracies to history
+                history["test"]['audio_accuracy'].append([epoch + 1, audio_accuracy_test])
+                history["test"]['visual_accuracy'].append([epoch + 1, visual_accuracy_test])
+                history["training"]['audio_accuracy'].append([epoch + 1, audio_accuracy_train])
+                history["training"]['visual_accuracy'].append([epoch + 1, visual_accuracy_train])
+                
+                print(f"Test Audio Accuracy: {audio_accuracy_test:.4f}, Test Visual Accuracy: {visual_accuracy_test:.4f}")
+                print(f"Train Audio Accuracy: {audio_accuracy_train:.4f}, Train Visual Accuracy: {visual_accuracy_train:.4f}")
+                
+                # Save checkpoint
+                torch.save({
+                    'epoch': epoch + 1,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': avg_loss,
+                }, CHECKPOINT_PATH)
+                print(f"Checkpoint saved and overwritten at {CHECKPOINT_PATH}")
         else:
             print(f"Epoch {epoch+1}/{EPOCHS}, No valid batches processed.")
 
-        # Save checkpoint
-        torch.save({
-            'epoch': epoch + 1,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': avg_loss,
-        }, CHECKPOINT_PATH)
-        print(f"Checkpoint saved and overwritten at {CHECKPOINT_PATH}")
-
+        
     # Save history to file
     with open(HISTORY_PATH, 'w') as f:
         json.dump(history, f)
