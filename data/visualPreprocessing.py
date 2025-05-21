@@ -1,3 +1,7 @@
+# Not used in the current version of the code
+# This script contains functions to preprocess video frames and extract visual features using VGGFace2.
+# As the current version of this code uses preprocessed audio features, the video preprocessing functions are not used.
+
 import torch
 import numpy as np
 import cv2
