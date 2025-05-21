@@ -1,5 +1,7 @@
 import os
 import time
+import json
+import numpy as np
 import torch
 import torch.nn as nn 
 import torch.optim as optim
@@ -8,7 +10,7 @@ from tqdm import tqdm
 from audioEncoder import AudioEncoder
 from model import AVContrastiveModel
 from dataset import VideoAudioDataset, padding_batch
-import json
+
 
 def get_files_from_dir(directory):
     """
@@ -24,62 +26,13 @@ def get_files_from_dir(directory):
                 file_pairs.append((avhubert_fps30_file, wav_file))
     return file_pairs
 
-def calculate_accuracy(model, dataloader, device):
-    """
-    Calculate the accuracy of the model on a dataset
-    """ 
-    model.eval()
-    correct_matches = 0
-    total_samples = 0
-
-    with torch.no_grad():
-        all_audio_embeddings = []
-        all_visual_embeddings = []
-
-        # Pass all samples through the model to get embeddings
-        for batch in dataloader:
-            visual_pooled = batch['visual_pooled'].to(device)
-            audio_stft = batch['audio_stft'].to(device)
-
-            if visual_pooled is None or audio_stft is None or audio_stft.numel() == 0:
-                continue
-
-            visual_embeddings, audio_embeddings = model(visual_pooled, audio_stft)
-            all_audio_embeddings.append(audio_embeddings)
-            all_visual_embeddings.append(visual_embeddings)
-
-        # Concatenate all embeddings
-        all_audio_embeddings = torch.cat(all_audio_embeddings, dim=0)
-        all_visual_embeddings = torch.cat(all_visual_embeddings, dim=0)
-
-        # Compute accuracy
-        for i in range(all_audio_embeddings.size(0)):
-            audio_embedding = all_audio_embeddings[i]
-            visual_embedding = all_visual_embeddings[i]
-
-            # Find closest visual embedding to the current audio embedding
-            distances_audio_to_visual = torch.norm(all_visual_embeddings - audio_embedding, dim=1)
-            closest_visual_idx = torch.argmin(distances_audio_to_visual)
-
-            # Find closest audio embedding to the current visual embedding
-            distances_visual_to_audio = torch.norm(all_audio_embeddings - visual_embedding, dim=1)
-            closest_audio_idx = torch.argmin(distances_visual_to_audio)
-
-            # Check if the matches are correct
-            if closest_visual_idx == i and closest_audio_idx == i:
-                correct_matches += 1
-
-            total_samples += 1
-
-    accuracy = correct_matches / total_samples if total_samples > 0 else 0.0
-    return accuracy
 
 if __name__ == "__main__":
 
     # --- Training Setup ---
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 4 
-    EPOCHS = 2
+    EPOCHS = 40
     PROJECTION_DIM = 256
     TRIPLET_MARGIN = 0.2
     NGF = 64
