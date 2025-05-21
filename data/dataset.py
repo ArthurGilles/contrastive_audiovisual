@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 import torch.nn.functional as F 
-from audioPreprocessing import extract_audio_stft
+from .audioPreprocessing import extract_audio_stft
 
 class VideoAudioDataset(Dataset):
     def __init__(self, files, device, audio_params):

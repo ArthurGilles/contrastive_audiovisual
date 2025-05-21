@@ -6,10 +6,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from audioEncoder import AudioEncoder
-from model import AVContrastiveModel
-from dataset import VideoAudioDataset, padding_batch
-from metric import calculate_accuracy
+from models.audioEncoder import AudioEncoder
+from models.model import AVContrastiveModel
+from data.dataset import VideoAudioDataset, padding_batch
+from utils.metric import compute_accuracy
 
 
 def get_files_from_dir(directory):
@@ -191,8 +191,8 @@ if __name__ == "__main__":
                 
                 # Calculate accuracy
                 # model.eval() is already set in the calculate_accuracy function
-                audio_accuracy_test, visual_accuracy_test = calculate_accuracy(model, test_dataloader)
-                audio_accuracy_train, visual_accuracy_train = calculate_accuracy(model, training_dataloader)
+                audio_accuracy_test, visual_accuracy_test = compute_accuracy(model, test_dataloader)
+                audio_accuracy_train, visual_accuracy_train = compute_accuracy(model, training_dataloader)
                 
                 # Save accuracies to history
                 history["test"]['audio_accuracy'].append([epoch + 1, audio_accuracy_test])

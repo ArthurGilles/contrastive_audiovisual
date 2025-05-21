@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import faiss
 
-def calculate_accuracy(model, dataloader, device):
+def compute_accuracy(model, dataloader, device):
     """
     Calculate the accuracy of the model on a dataset.
     This function uses FAISS for efficient nearest neighbor search.
