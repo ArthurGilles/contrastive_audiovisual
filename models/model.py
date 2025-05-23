@@ -1,7 +1,14 @@
 import torch.nn as nn
 
+
 class AVContrastiveModel(nn.Module):
-    def __init__(self, audio_encoder, visual_feature_dim=512, audio_feature_dim=512, projection_dim=256):
+    def __init__(
+        self,
+        audio_encoder,
+        visual_feature_dim=512,
+        audio_feature_dim=512,
+        projection_dim=256,
+    ):
         super().__init__()
         self.audio_encoder = audio_encoder
         self.visual_projection = nn.Linear(visual_feature_dim, projection_dim)

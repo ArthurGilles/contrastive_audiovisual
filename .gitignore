@@ -2,3 +2,5 @@ __pycache__/
 **/__pycache__/
 /checkpoints/checkpoint.pth
 /outputs/history.json
+.ruff_cache/
+**/.ruff_cache/

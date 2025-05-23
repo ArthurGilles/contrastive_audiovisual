@@ -1,0 +1,52 @@
+[tool.ruff]
+# Max line length
+line-length = 88
+
+# Target Python version
+target-version = "py39"
+
+# Rules to enable:
+# - E: pycodestyle (style)
+# - F: pyflakes (logic bugs)
+# - B: bugbear (common Python traps)
+# - I: isort (import sorting)
+# - N: pep8-naming (naming conventions)
+# - D: pydocstyle (docstring style)
+# - UP: pyupgrade (modern syntax suggestions)
+# - ANN: flake8-annotations (type hints)
+lint.select = ["E", "F", "B", "I", "N", "D", "UP"]
+
+# Common ignores:
+# - E501: line too long (Black handles this)
+# - D100, D101, D102: docstrings for public modules/classes/functions (can be too strict for experiments)
+# - ANN101-ANN206: missing type hints for self/cls/args 
+lint.ignore = [
+  "E501",
+  "D100", "D101", "D102",
+  "ANN101", "ANN102", "ANN201", "ANN202", "ANN204", "ANN206"
+]
+
+# Exclude migrations and hidden folders
+extend-exclude = [
+  "__pycache__"
+]
+
+# Allow jupyter and scripts
+include = ["*.py", "*.pyi", "*.ipynb"]
+
+# Ensure reproducible lints across systems
+fix = true
+show-fixes = true
+
+# Optional: cache directory
+cache-dir = ".ruff_cache"
+
+# Docstring style
+[tool.ruff.pydocstyle]
+convention = "google"
+
+# Formatting settings
+[tool.ruff.format]
+quote-style = "double"     # Use " not '
+indent-style = "space"     # Use 4-space indentation
+line-ending = "lf"         # Consistent Unix-style line endings
