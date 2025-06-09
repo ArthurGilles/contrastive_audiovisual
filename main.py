@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # --- Training Setup ---
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 4
-    EPOCHS = 100
+    EPOCHS = 55
     PROJECTION_DIM = 512
     TRIPLET_MARGIN = 0.2
     NGF = 64
@@ -196,10 +196,10 @@ if __name__ == "__main__":
                 # Calculate accuracy
                 # model.eval() is already set in the calculate_accuracy function
                 audio_accuracy_test, visual_accuracy_test = compute_accuracy(
-                    model, test_dataloader, device=device
+                    model, test_dataloader, device=device, k=500
                 )
                 audio_accuracy_train, visual_accuracy_train = compute_accuracy(
-                    model, training_dataloader, device=device
+                    model, training_dataloader, device=device, k=500
                 )
 
                 # Save accuracies to history

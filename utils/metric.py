@@ -3,7 +3,7 @@ import torch
 import faiss
 
 
-def compute_accuracy(model, dataloader, device):
+def compute_accuracy(model, dataloader, device, k=1):
     """
     Calculate the accuracy of the model on a dataset.
     This function uses FAISS for efficient nearest neighbor search.
@@ -14,6 +14,7 @@ def compute_accuracy(model, dataloader, device):
         model: The model to evaluate.
         dataloader: DataLoader providing the dataset.
         device: Device to run the model on (CPU or GPU).
+        k: Number of nearest neighbors to consider for accuracy calculation.
     Returns:
         audio_accuracy: Accuracy of audio embeddings when matched with visual embeddings.
         visual_accuracy: Accuracy of visual embeddings when matched with audio embeddings.
@@ -74,16 +75,11 @@ def compute_accuracy(model, dataloader, device):
     index.add(all_audio_embeddings)
 
     # Search for nearest neighbors
-    k = 1  # we only want the closest match
     distances, indices = index.search(all_visual_embeddings, k)
 
-    # Flatten the results (remove the k dimension since k=1)
-    distances = distances.flatten()
-    indices = indices.flatten()
-
-    # Check if the closest matches are correct
+    # Check if the corresponding embedding is among the k closest matches
     for i in range(all_visual_embeddings.shape[0]):
-        if indices[i] == i:
+        if i in indices[i]:
             correct_visual_matches += 1
         total_visual_samples += 1
 
@@ -107,13 +103,9 @@ def compute_accuracy(model, dataloader, device):
     # Search for nearest neighbors
     distances, indices = index.search(all_audio_embeddings, k)
 
-    # Flatten the results (remove the k dimension since k=1)
-    distances = distances.flatten()
-    indices = indices.flatten()
-
-    # Check if the closest matches are correct
+    # Check if the corresponding embedding is among the k closest matches
     for i in range(all_audio_embeddings.shape[0]):
-        if indices[i] == i:
+        if i in indices[i]:
             correct_audio_matches += 1
         total_audio_samples += 1
 
