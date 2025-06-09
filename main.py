@@ -12,7 +12,8 @@ from data.dataset import VideoAudioDataset, padding_batch
 from utils.metric import compute_accuracy
 import torch.multiprocessing as mp
 
-#mp.set_start_method('spawn', force=True)
+# mp.set_start_method('spawn', force=True)
+
 
 def get_files_from_dir(directory):
     """
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     VISUAL_FEATURE_DIM = 768
     AUDIO_FEATURE_DIM = NGF * 8
     CHECKPOINT_PATH = "./checkpoints/checkpoint.pth"
-    HISTORY_PATH = "./outputs/training_history.json"
+    HISTORY_PATH = "./outputs/history.json"
     TRAINING_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/train_data_NTCD/"
     TEST_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/test_data_NTCD/clean"
     # Audio STFT parameters
@@ -195,10 +196,10 @@ if __name__ == "__main__":
                 # Calculate accuracy
                 # model.eval() is already set in the calculate_accuracy function
                 audio_accuracy_test, visual_accuracy_test = compute_accuracy(
-                    model, test_dataloader,device=device
+                    model, test_dataloader, device=device
                 )
                 audio_accuracy_train, visual_accuracy_train = compute_accuracy(
-                    model, training_dataloader,device=device
+                    model, training_dataloader, device=device
                 )
 
                 # Save accuracies to history
@@ -233,7 +234,7 @@ if __name__ == "__main__":
                     CHECKPOINT_PATH,
                 )
                 print(f"Checkpoint saved and overwritten at {CHECKPOINT_PATH}")
-            
+
             # Save history to file
             with open(HISTORY_PATH, "w") as f:
                 json.dump(history, f)
