@@ -6,7 +6,7 @@ class AVContrastiveModel(nn.Module):
         self,
         audio_encoder,
         visual_feature_dim=512,
-        audio_feature_dim=512,
+        audio_feature_dim=768,
         projection_dim=256,
     ):
         super().__init__()

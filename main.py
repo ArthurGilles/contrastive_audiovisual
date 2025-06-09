@@ -10,7 +10,9 @@ from models.audioEncoder import AudioEncoder
 from models.model import AVContrastiveModel
 from data.dataset import VideoAudioDataset, padding_batch
 from utils.metric import compute_accuracy
+import torch.multiprocessing as mp
 
+#mp.set_start_method('spawn', force=True)
 
 def get_files_from_dir(directory):
     """
@@ -36,20 +38,20 @@ if __name__ == "__main__":
     # --- Training Setup ---
     LEARNING_RATE = 1e-4
     BATCH_SIZE = 4
-    EPOCHS = 40
-    PROJECTION_DIM = 256
+    EPOCHS = 100
+    PROJECTION_DIM = 512
     TRIPLET_MARGIN = 0.2
     NGF = 64
     AUDIO_INPUT_NC = 2
-    VISUAL_FEATURE_DIM = 512
+    VISUAL_FEATURE_DIM = 768
     AUDIO_FEATURE_DIM = NGF * 8
-    CHECKPOINT_PATH = "checkpoint.pth"
-    HISTORY_PATH = "training_history.json"
+    CHECKPOINT_PATH = "./checkpoints/checkpoint.pth"
+    HISTORY_PATH = "./outputs/training_history.json"
     TRAINING_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/train_data_NTCD/"
     TEST_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/test_data_NTCD/clean"
     # Audio STFT parameters
     NFFT = 512
-    HOP_LENGTH = 160
+    HOP_LENGTH = 128
     SAMPLE_RATE = 16000
     NEGATIVE_SAMPLES = 3
 
@@ -85,14 +87,14 @@ if __name__ == "__main__":
         training_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=4,  # Potentially change, need to test on grid5000
+        num_workers=0,  # Potentially change, need to test on grid5000
         collate_fn=padding_batch,  # Use the custom collate function for padding
     )
     test_dataloader = DataLoader(
         test_dataset,
         batch_size=BATCH_SIZE,
         shuffle=False,
-        num_workers=4,  # Potentially change, need to test on grid5000
+        num_workers=0,  # Potentially change, need to test on grid5000
         collate_fn=padding_batch,  # Use the custom collate function for padding
     )
 
@@ -193,10 +195,10 @@ if __name__ == "__main__":
                 # Calculate accuracy
                 # model.eval() is already set in the calculate_accuracy function
                 audio_accuracy_test, visual_accuracy_test = compute_accuracy(
-                    model, test_dataloader
+                    model, test_dataloader,device=device
                 )
                 audio_accuracy_train, visual_accuracy_train = compute_accuracy(
-                    model, training_dataloader
+                    model, training_dataloader,device=device
                 )
 
                 # Save accuracies to history
@@ -231,12 +233,13 @@ if __name__ == "__main__":
                     CHECKPOINT_PATH,
                 )
                 print(f"Checkpoint saved and overwritten at {CHECKPOINT_PATH}")
+            
+            # Save history to file
+            with open(HISTORY_PATH, "w") as f:
+                json.dump(history, f)
+            print(f"Training history saved to {HISTORY_PATH}")
+
         else:
             print(f"Epoch {epoch + 1}/{EPOCHS}, No valid batches processed.")
-
-    # Save history to file
-    with open(HISTORY_PATH, "w") as f:
-        json.dump(history, f)
-    print(f"Training history saved to {HISTORY_PATH}")
 
     print("Training Finished.")

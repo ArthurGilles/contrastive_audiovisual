@@ -18,7 +18,7 @@ def compute_accuracy(model, dataloader, device):
         audio_accuracy: Accuracy of audio embeddings when matched with visual embeddings.
         visual_accuracy: Accuracy of visual embeddings when matched with audio embeddings.
     """
-    if device != "cpu" or "cuda" not in device:
+    if not (str(device) == "cpu" or "cuda" in str(device)):
         raise ValueError("Device must be 'cpu' or 'cuda'.")
 
     model.eval()

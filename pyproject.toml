@@ -42,7 +42,7 @@ show-fixes = true
 cache-dir = ".ruff_cache"
 
 # Docstring style
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 # Formatting settings
