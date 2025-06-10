@@ -62,11 +62,12 @@ class AudioEncoder(nn.Module):
         audio_conv8feature = self.frequency_pool(
             audio_conv8feature
         )  # Final feature map
-
+        """
         # Global pooling (average over frequency and time)
         # Output shape after pooling: [batch, ngf*8] - This is FIXED size.
         pooled_features = torch.mean(
             audio_conv8feature, dim=[2, 3]
         )  # Global Average Pooling
+        """
 
-        return pooled_features
+        return audio_conv8feature

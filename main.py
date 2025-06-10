@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from models.audioEncoder import AudioEncoder
 from models.model import AVContrastiveModel
+from models.attentionBlock import TemporalAttention
+from models.audioPoolingLayer import AudioPoolingLayer
 from data.dataset import VideoAudioDataset, padding_batch
 from utils.metric import compute_accuracy
 import torch.multiprocessing as mp
@@ -38,14 +40,14 @@ def get_files_from_dir(directory):
 if __name__ == "__main__":
     # --- Training Setup ---
     LEARNING_RATE = 1e-4
-    BATCH_SIZE = 4
-    EPOCHS = 55
-    PROJECTION_DIM = 512
-    TRIPLET_MARGIN = 0.2
-    NGF = 64
+    BATCH_SIZE = 64
+    EPOCHS = 75
+    TRIPLET_MARGIN = 0.8
+    NGF = 32
     AUDIO_INPUT_NC = 2
     VISUAL_FEATURE_DIM = 768
-    AUDIO_FEATURE_DIM = NGF * 8
+    NUM_HEADS = 1 
+    PROJECTION_DIM = 512
     CHECKPOINT_PATH = "./checkpoints/checkpoint.pth"
     HISTORY_PATH = "./outputs/history.json"
     TRAINING_DATASET_PATH = "/srv/storage/talc@storage4.nancy.grid5000.fr/multispeech/corpus/audio_visual/TCD-TIMIT/train_data_NTCD/"
@@ -54,7 +56,8 @@ if __name__ == "__main__":
     NFFT = 512
     HOP_LENGTH = 128
     SAMPLE_RATE = 16000
-    NEGATIVE_SAMPLES = 3
+    NEGATIVE_SAMPLES = 20
+    AUDIO_FEATURE_DIM = NGF * 8*(NFFT // 512)
 
     if NEGATIVE_SAMPLES >= BATCH_SIZE:
         raise ValueError("Number of negative samples must be less than batch size.")
@@ -103,8 +106,14 @@ if __name__ == "__main__":
 
     # --- Initialize Model, Loss, Optimizer ---
     audio_encoder = AudioEncoder(ngf=NGF, input_nc=AUDIO_INPUT_NC)
+    temporal_attention = TemporalAttention(
+        embed_dim=NGF*8, num_heads=NUM_HEADS
+    )
+    audio_pooling_layer = AudioPoolingLayer()
     model = AVContrastiveModel(
         audio_encoder=audio_encoder,
+        attention_block=temporal_attention,
+        pooling_layer=audio_pooling_layer,
         visual_feature_dim=VISUAL_FEATURE_DIM,
         audio_feature_dim=AUDIO_FEATURE_DIM,
         projection_dim=PROJECTION_DIM,
@@ -172,7 +181,7 @@ if __name__ == "__main__":
                 loss += loss_v_a_a
 
                 indices_neg = torch.roll(indices_neg, shifts=1, dims=0)
-
+            loss /= NEGATIVE_SAMPLES  # Average loss over all negative samples
             # Backward pass and optimization
             loss.backward()
             optimizer.step()
@@ -196,10 +205,10 @@ if __name__ == "__main__":
                 # Calculate accuracy
                 # model.eval() is already set in the calculate_accuracy function
                 audio_accuracy_test, visual_accuracy_test = compute_accuracy(
-                    model, test_dataloader, device=device, k=500
+                    model, test_dataloader, device=device, k=9
                 )
                 audio_accuracy_train, visual_accuracy_train = compute_accuracy(
-                    model, training_dataloader, device=device, k=500
+                    model, training_dataloader, device=device, k=42
                 )
 
                 # Save accuracies to history
